@@ -4,42 +4,56 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>かふぇ絲 AR</title>
-    <script src="https://cdn.nianticspatial.com/sdk/v1/niantic-web-ar.js"></script>
+    <script src="https://cdn.nianticspatial.com/sdk/v0.1.0/niantic-web-ar.js"></script>
     <style>
-        /* 背景を強制的に透明にし、カメラ映像が突き抜けて見えるようにします */
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background: transparent !important; 
+        body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #000; }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.8); z-index: 10;
         }
-        /* Nianticの表示エリアを画面いっぱいに広げます */
-        niantic-vps-scene {
-            display: block; width: 100vw; height: 100vh;
-        }
-        #start-button {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 9999; padding: 20px 40px; background: #fff; border-radius: 50px;
-            font-size: 18px; font-weight: bold; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        #start-btn {
+            padding: 20px 40px; font-size: 18px; font-weight: bold;
+            background: #fff; border: none; border-radius: 50px; cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <button id="start-button">タップしてARを開始</button>
+    <div id="overlay">
+        <button id="start-btn">ARを開始してトラを探す</button>
+    </div>
 
-    <niantic-vps-scene 
-        location-id="baabee12-b43b-47c9-8e7f-70c57702746f" 
-        render-camera="true">
+    <niantic-vps-scene id="scene" location-id="baabee12-b43b-47c9-8e7f-70c57702746f">
         <niantic-model src="tora-v1.glb" scale="1 1 1" position="0 0 0"></niantic-model>
     </niantic-vps-scene>
 
     <script>
-        const btn = document.getElementById('start-button');
+        const btn = document.getElementById('start-btn');
+        const overlay = document.getElementById('overlay');
+        const scene = document.getElementById('scene');
+
         btn.addEventListener('click', async () => {
-            // iPhoneのセンサー許可
+            // 1. iPhoneのセンサー許可（これがないとカメラが真っ暗になります）
             if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) {
-                await DeviceOrientationEvent.requestPermission();
+                await DeviceOrientationEvent.requestPermission().catch(console.error);
             }
-            btn.style.display = 'none';
-            // 画面を一度軽くタップしたことにする「おまじない」
+
+            // 2. カメラの強制起動
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(() => {
+                    overlay.style.display = 'none';
+                    // 3. シーンの明示的な初期化
+                    if (scene && scene.start) {
+                        scene.start();
+                    }
+                })
+                .catch(err => {
+                    alert("カメラを起動できません: " + err.name);
+                });
+        });
+
+        // 画面が真っ暗になるのを防ぐための強制描画命令
+        window.addEventListener('load', () => {
             window.dispatchEvent(new Event('resize'));
         });
     </script>
