@@ -6,10 +6,18 @@
     <title>かふぇ絲 AR</title>
     <script src="https://cdn.nianticspatial.com/sdk/v1/niantic-web-ar.js"></script>
     <style>
-        body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        /* 背景を強制的に透明にし、カメラ映像が突き抜けて見えるようにします */
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background: transparent !important; 
+        }
+        /* Nianticの表示エリアを画面いっぱいに広げます */
+        niantic-vps-scene {
+            display: block; width: 100vw; height: 100vh;
+        }
         #start-button {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 1000; padding: 20px 40px; background: #fff; border-radius: 50px;
+            z-index: 9999; padding: 20px 40px; background: #fff; border-radius: 50px;
             font-size: 18px; font-weight: bold; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
     </style>
@@ -17,25 +25,22 @@
 <body>
     <button id="start-button">タップしてARを開始</button>
 
-    <niantic-vps-scene id="ar-scene" location-id="baabee12-b43b-47c9-8e7f-70c57702746f" render-camera="true">
+    <niantic-vps-scene 
+        location-id="baabee12-b43b-47c9-8e7f-70c57702746f" 
+        render-camera="true">
         <niantic-model src="tora-v1.glb" scale="1 1 1" position="0 0 0"></niantic-model>
     </niantic-vps-scene>
 
     <script>
-        const startButton = document.getElementById('start-button');
-        
-        startButton.addEventListener('click', async () => {
-            // iPhoneのセンサー許可だけをここで実行
+        const btn = document.getElementById('start-button');
+        btn.addEventListener('click', async () => {
+            // iPhoneのセンサー許可
             if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) {
-                try {
-                    await DeviceOrientationEvent.requestPermission();
-                } catch (e) {
-                    console.error("センサー許可エラー:", e);
-                }
+                await DeviceOrientationEvent.requestPermission();
             }
-            
-            // ボタンを消すだけで、あとはSDKが自動でカメラを起動させます
-            startButton.style.display = 'none';
+            btn.style.display = 'none';
+            // 画面を一度軽くタップしたことにする「おまじない」
+            window.dispatchEvent(new Event('resize'));
         });
     </script>
 </body>
