@@ -6,55 +6,73 @@
     <title>かふぇ絲 AR</title>
     <script src="https://cdn.nianticspatial.com/sdk/v1/niantic-web-ar.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
-        /* 映像を表示するレイヤーを強制的に全画面にします */
-        niantic-vps-scene { display: block; width: 100vw; height: 100vh; }
+        body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-            background: #000; z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #000; z-index: 1000; color: white;
         }
         #start-btn {
             padding: 20px 40px; font-size: 1.2rem; font-weight: bold;
-            background: #fff; border: none; border-radius: 50px;
+            background: #fff; border: none; border-radius: 50px; color: #000;
         }
     </style>
 </head>
 <body>
     <div id="overlay">
-        <button id="start-btn">ARを開始する</button>
+        <button id="start-btn">カメラを起動してARを開始</button>
+        <p id="status-text" style="margin-top: 20px; font-size: 14px; color: #ccc;"></p>
     </div>
 
-    <niantic-vps-scene 
-        location-id="baabee12-b43b-47c9-8e7f-70c57702746f" 
-        render-camera="true" 
-        autoplay="true">
+    <niantic-vps-scene id="ar-scene" location-id="baabee12-b43b-47c9-8e7f-70c57702746f">
         <niantic-model src="tora-v1.glb" scale="1 1 1" position="0 0 0"></niantic-model>
     </niantic-vps-scene>
 
     <script>
         const btn = document.getElementById('start-btn');
+        const status = document.getElementById('status-text');
         const overlay = document.getElementById('overlay');
+        const scene = document.getElementById('ar-scene');
 
         btn.addEventListener('click', async () => {
-            // 1. iPhoneのセンサー許可（ジャイロ・加速度）
-            if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) {
-                await DeviceOrientationEvent.requestPermission().catch(e => console.error(e));
+            try {
+                status.innerText = "センサーの許可を求めています...";
+                
+                // 1. iPhoneのモーションセンサー許可
+                if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) {
+                    await DeviceOrientationEvent.requestPermission();
+                }
+
+                status.innerText = "カメラを起動しています...";
+                
+                // 2. ブラウザのカメラ機能を直接呼び出して「許可」のトリガーを引く
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' }, 
+                    audio: false 
+                });
+                
+                // カメラが起動できたらストリームを一旦止める（SDKに渡すため）
+                stream.getTracks().forEach(track => track.stop());
+
+                status.innerText = "ARエンジンを初期化中...";
+                
+                // 3. Nianticシーンの手動起動を試みる
+                if (scene) {
+                    // もしstartメソッドがなくても、オーバーレイを消して描画を強制する
+                    overlay.style.display = 'none';
+                    if (typeof scene.start === 'function') {
+                        scene.start();
+                    }
+                }
+
+                // 4. 描画を促すために画面サイズ変更イベントを発火
+                window.dispatchEvent(new Event('resize'));
+
+            } catch (err) {
+                console.error(err);
+                status.innerText = "エラー: " + err.name;
+                alert("起動に失敗しました。Safariの設定でカメラが許可されているか、他のカメラアプリを終了して再試行してください。");
             }
-
-            // 2. 黒い幕（オーバーレイ）を消して、後ろで動いているはずのカメラを表示
-            overlay.style.opacity = '0';
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 300);
-
-            // 3. 画面の再描画を強制する（これで真っ暗な画面が直ることがあります）
-            window.dispatchEvent(new Event('resize'));
-        });
-
-        // SDKのエラーをログに吐き出す（PC接続時に確認可能）
-        window.addEventListener('error', (e) => {
-            console.error("SDK Error:", e.message);
         });
     </script>
 </body>
