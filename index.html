@@ -1,78 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>かふぇ絲 AR</title>
-    <script src="https://cdn.nianticspatial.com/sdk/v1/niantic-web-ar.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>かふぇ絲 AR体験</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <style>
-        body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: sans-serif; }
-        #start-button {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 1000; padding: 20px 40px; background: #fff; border: none;
-            border-radius: 50px; font-size: 18px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        body { margin: 0; background-color: #f0f0f0; font-family: sans-serif; }
+        model-viewer { width: 100vw; height: 100vh; --poster-color: transparent; }
+        .ar-button {
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            padding: 16px 32px; background: #fff; border-radius: 30px;
+            border: none; font-weight: bold; font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        niantic-vps-scene { display: block; width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
-    <button id="start-button">ARを開始する</button>
 
-    <niantic-vps-scene 
-        id="ar-scene"
-        api-key="trPrNIccFqeSZ11vV0IjY445lkmfhjMbXXTYsSJEbRY"
-        location-id="baabee12-b43b-47c9-8e7f-70c57702746f" 
-        render-camera="true"
-        vps-enabled="true"
-        autoplay="false">
-        <niantic-model src="tora-v1.glb" scale="1 1 1" position="0 0 0"></niantic-model>
-    </niantic-vps-scene>
+    <model-viewer 
+        src="tora-v1.glb" 
+        ar 
+        ar-modes="webxr scene-viewer quick-look" 
+        camera-controls 
+        shadow-intensity="1" 
+        auto-rotate>
+        
+        <button slot="ar-button" class="ar-button">
+            店内にトラを出現させる
+        </button>
+        
+    </model-viewer>
 
-    <script>
-        const btn = document.getElementById('start-button');
-        const scene = document.getElementById('ar-scene');
-
-        // iOSのセキュリティ制限を回避するため、非同期ではなく「同期」に近い形で許可を連鎖させます
-        btn.onclick = async () => {
-            btn.innerText = "準備中...";
-            
-            try {
-                // 1. まずセンサー許可を「単独で」実行（iPhone 15対策）
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    const res = await DeviceOrientationEvent.requestPermission();
-                    if (res !== 'granted') {
-                        alert("センサーへのアクセスを許可してください。");
-                        return;
-                    }
-                }
-
-                // 2. 次に位置情報を取得
-                await new Promise((resolve) => {
-                    navigator.geolocation.getCurrentPosition(resolve, (err) => {
-                        console.warn("Location check bypassed", err);
-                        resolve();
-                    }, { timeout: 5000 });
-                });
-
-                // 3. SDKのロード完了を待ってからスタート
-                btn.innerText = "起動中...";
-                customElements.whenDefined('niantic-vps-scene').then(() => {
-                    btn.style.display = 'none';
-                    if (scene && typeof scene.start === 'function') {
-                        scene.start();
-                    } else {
-                        scene.setAttribute('autoplay', 'true');
-                    }
-                    window.dispatchEvent(new Event('resize'));
-                });
-
-            } catch (e) {
-                // エラー内容を画面に表示（トラブルシューティング用）
-                alert("起動に失敗しました: " + e.message);
-                btn.innerText = "再試行する";
-            }
-        };
-    </script>
 </body>
 </html>
