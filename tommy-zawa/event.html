@@ -12,38 +12,59 @@
 
     <style>
         body { margin: 0; overflow: hidden; }
+        /* ARの読み込み中UIなどは非表示 */
         .mindar-ui-scanning, .mindar-ui-loading { display: none !important; }
 
-        /* 撮影ボタン：連続で押しやすい大きな丸ボタン */
-        #shot-btn {
+        #ui-layer {
             position: fixed;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.7);
-            border: 5px solid white;
-            border-radius: 50%;
-            z-index: 1000;
-            box-shadow: 0 0 15px rgba(0,0,0,0.3);
-            cursor: pointer;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s;
         }
-        #shot-btn:active {
-            background: rgba(255, 255, 255, 0.9);
-            transform: translateX(-50%) scale(0.9);
+
+        .guide-text {
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-family: sans-serif;
+        }
+
+        #shot-mode-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* 撮影用クラス：これを付けるとUIが消える */
+        .hide-ui {
+            opacity: 0 !important;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="shot-btn"></div>
+    <div id="ui-layer">
+        <div class="guide-text">ボタンを押して、標準スクショで撮影！</div>
+        <button id="shot-mode-btn">📸 撮影モード (UIを隠す)</button>
+    </div>
 
     <a-scene 
-        id="scene"
         mindar-image="imageTargetSrc: ./tommy.mind; filterMinCF: 0.0001; filterBeta: 0.001;" 
         color-space="sRGB" 
-        renderer="colorManagement: true, preserveDrawingBuffer: true" 
+        renderer="colorManagement: true, physicallyCorrectLights" 
         vr-mode-ui="enabled: false" 
         device-orientation-permission-ui="enabled: false">
         
@@ -69,31 +90,17 @@
     </a-scene>
 
     <script>
-        const btn = document.querySelector("#shot-btn");
-        const sceneEl = document.querySelector("a-scene");
+        const uiLayer = document.getElementById('ui-layer');
+        const btn = document.getElementById('shot-mode-btn');
 
-        btn.addEventListener("click", () => {
-            const video = document.querySelector("video");
-            const canvas = sceneEl.canvas;
+        btn.addEventListener('click', () => {
+            // UIを隠す
+            uiLayer.classList.add('hide-ui');
 
-            // 合成用キャンバス
-            const captureCanvas = document.createElement("canvas");
-            captureCanvas.width = canvas.width;
-            captureCanvas.height = canvas.height;
-            const ctx = captureCanvas.getContext("2d");
-
-            // 背景とモデルを合成
-            ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-            ctx.drawImage(canvas, 0, 0, captureCanvas.width, captureCanvas.height);
-
-            // ダウンロード用リンクを生成
-            const link = document.createElement("a");
-            const now = new Date();
-            link.download = `CafeIto-${now.getHours()}${now.getMinutes()}${now.getSeconds()}.png`;
-            link.href = captureCanvas.toDataURL("image/png");
-            
-            // 擬似クリックで保存（iPhoneでは「ダウンロードしますか？」が出る）
-            link.click();
+            // 5秒後にUIを再表示する
+            setTimeout(() => {
+                uiLayer.classList.remove('hide-ui');
+            }, 5000);
         });
     </script>
 </body>
